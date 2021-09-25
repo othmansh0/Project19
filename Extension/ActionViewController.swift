@@ -23,7 +23,7 @@
 
 //NSExtensionJavaScriptPreprocessingFile", then give it the value "Action". This tells iOS that when our extension is called, we need to run the JavaScript preprocessing file called Action.js, which will be in our app bundle
 
-
+// NSDictionary you don't need to declare or even know what data types it holds
 import UIKit
 import MobileCoreServices
 
@@ -43,6 +43,13 @@ class ActionViewController: UIViewController {
                 itemProvider.loadItem(forTypeIdentifier: kUTTypePropertyList as String){//1
                     [weak self] (dict, error) in
                     
+                    
+                    //nothing in  dictionary other than the data we sent from JavaScript, and that's stored in a special key called NSExtensionJavaScriptPreprocessingResultsKey
+                    guard let itemDictionary = dict as? NSDictionary else { return }
+                    
+                    //We sent a dictionary of data from JavaScript, so we typecast javaScriptValues as an NSDictionary
+                    guard let javaScriptValues = itemDictionary[NSExtensionJavaScriptPreprocessingResultsKey] as? NSDictionary else { return }
+                    print(javaScriptValues)
                     
                 }
             }
