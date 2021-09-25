@@ -24,6 +24,33 @@
 //NSExtensionJavaScriptPreprocessingFile", then give it the value "Action". This tells iOS that when our extension is called, we need to run the JavaScript preprocessing file called Action.js, which will be in our app bundle
 
 // NSDictionary you don't need to declare or even know what data types it holds
+
+//------------------------------------------------------------------------------------
+
+//When working with the keyboard, the notifications we care about are keyboardWillHideNotification and keyboardWillChangeFrameNotification
+//first will be sent when the keyboard has finished hiding, and the second will be shown when any keyboard state change happens
+
+//addObserver() method, which takes four parameters: the object that should receive notifications (it's self), the method that should be called, the notification we want to receive, and the object we want to watch. We're going to pass nil to the last parameter, meaning "we don't care who sends the notification."
+
+
+
+//1.the dictionary will contain a key called UIResponder.keyboardFrameEndUserInfoKey telling us the frame of the keyboard after it has finished animating. This will be of type NSValue, which in turn is of type CGRect. The CGRect struct holds both a CGPoint and a CGSize, so it can be used to describe a rectangle
+
+//2.contentInset the amount to push its content from edges...if = 0 then occupy all space
+
+//setting the inset of a text view is done using the UIEdgeInsets struct, which needs insets for all four edges. I'm using the text view's content inset for its scrollIndicatorInsets to save time
+
+//-----------------------
+
+//Our own preprocessing JavaScript runs before our Swift code.
+//This is where we can send in any data about the page.
+
+//When our Swift extension finishes we can send values back to JavaScript.
+//Anything we send back is then made available to our action file
+
+
+
+
 import UIKit
 import MobileCoreServices
 
@@ -39,6 +66,14 @@ class ActionViewController: UIViewController {
         
         navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(done))
         
+        //get a reference to the default notification center
+        let notificationCenter = NotificationCenter.default
+        //addObserver
+        notificationCenter.addObserver(self, selector: #selector(adjustForKeyboard), name: UIResponder.keyboardWillHideNotification, object: nil)
+        notificationCenter.addObserver(self, selector: #selector(adjustForKeyboard), name: UIResponder.keyboardDidChangeFrameNotification, object: nil)
+        
+        
+        
         //When extension is created, its extensionContext lets us control how it interacts with the parent app. In the case of inputItems this will be an array of data the parent app is sending to our extension to use. We only care about this first item in this project, and even then it might not exist, so we conditionally typecast using if let and as?
         if let inputItem = extensionContext?.inputItems.first as? NSExtensionItem {
             
@@ -46,6 +81,8 @@ class ActionViewController: UIViewController {
             if let itemProvider = inputItem.attachments?.first  {
                 
                 //ask the item provider to actually provide us with its item, but you'll notice it uses a closure so this code executes asynchronously. the method will carry on executing while the item provider is busy loading and sending us its data
+                
+                //When loadItem(forTypeIdentifier:) completes it will call a closure so we can act on its data
                 itemProvider.loadItem(forTypeIdentifier: kUTTypePropertyList as String){//1
                     [weak self] (dict, error) in
                     
@@ -89,6 +126,39 @@ class ActionViewController: UIViewController {
         extensionContext?.completeRequest(returningItems: [item])
 
 
+    }
+    //receive a parameter that is of type Notification. Notification will include the name of the notification as well as a Dictionary containing notification-specific information called userInfo
+    @objc func adjustForKeyboard(notification: Notification) {
+        //1.tells us the size of keyboard
+        guard let keyboardValue = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue else { return }
+        //convert NSValue to rectangle
+        let keyboardScreenEndFrame = keyboardValue.cgRectValue
+        
+        //convert the rectangle to our view's co-ordinates
+        //because rotation isn't factored into the frame,
+        //so if the user is in landscape we'll have the width and height flipped
+        //using the convert() method will fix that
+        let keyboardViewEndFrame = view.convert(keyboardScreenEndFrame, from: view.window)
+        
+        //check we're hiding or not
+        if notification.name == UIResponder.keyboardWillHideNotification {
+            //2.make sure our textView takes all the available space
+            script.contentInset = .zero
+        } else {//in did change frame/keyboard is being used
+           
+            script.contentInset = UIEdgeInsets(top: 0, left: 0, bottom: keyboardViewEndFrame.height - view.safeAreaInsets.bottom, right: 0)
+            //-view.safeAreaInsets.bottom
+            //on oled iphones there/s extra space we need to remvoe
+            
+        }
+        //controls how much margin apply to little scroll bar on the right edge of textView when the scroll
+        
+        //it will match always the side of our textView
+        script.scrollIndicatorInsets = script.contentInset
+        
+        //make our textView to scroll down to show whatever user's hand tapped on
+        let selectedRange = script.selectedRange
+        script.scrollRangeToVisible(selectedRange)
     }
     
 }
