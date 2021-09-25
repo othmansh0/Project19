@@ -36,6 +36,9 @@ class ActionViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(done))
+        
         //When extension is created, its extensionContext lets us control how it interacts with the parent app. In the case of inputItems this will be an array of data the parent app is sending to our extension to use. We only care about this first item in this project, and even then it might not exist, so we conditionally typecast using if let and as?
         if let inputItem = extensionContext?.inputItems.first as? NSExtensionItem {
             
@@ -68,9 +71,24 @@ class ActionViewController: UIViewController {
     }
     
     @IBAction func done() {
-        // Return any edited content to the host app.
-        // This template doesn't do anything, so we just echo the passed in items.
-        self.extensionContext!.completeRequest(returningItems: self.extensionContext!.inputItems, completionHandler: nil)
+        //thing we'll pass back
+        //Create a new NSExtensionItem object that will host our items
+        let item = NSExtensionItem()
+        //passing our script
+        //Create a dictionary containing the key "customJavaScript" and the value of our script
+        let argument: NSDictionary = ["customJavaScript": script.text]
+        
+        //thing to pass to finalize in js file
+        //Put that dictionary into another dictionary with the key NSExtensionJavaScriptFinalizeArgumentKey.
+        let webDictionary: NSDictionary = [NSExtensionJavaScriptFinalizeArgumentKey: argument]
+        //Wrap the big dictionary inside an NSItemProvider object with the type identifier kUTTypePropertyList.
+        let customJavaScript = NSItemProvider(item: webDictionary, typeIdentifier: kUTTypePropertyList as String)
+        //Place that NSItemProvider into our NSExtensionItem as its attachments
+        item.attachments = [customJavaScript]
+        //Call completeRequest(returningItems:), returning our NSExtensionItem
+        extensionContext?.completeRequest(returningItems: [item])
+
+
     }
     
 }
