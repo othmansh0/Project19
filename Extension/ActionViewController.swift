@@ -28,15 +28,18 @@ import UIKit
 import MobileCoreServices
 
 class ActionViewController: UIViewController {
-
-    @IBOutlet weak var imageView: UIImageView!
-
+    
+    @IBOutlet var script: UITextView!
+    
+    var pageTitle = ""
+    var pageURL = ""
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         //When extension is created, its extensionContext lets us control how it interacts with the parent app. In the case of inputItems this will be an array of data the parent app is sending to our extension to use. We only care about this first item in this project, and even then it might not exist, so we conditionally typecast using if let and as?
         if let inputItem = extensionContext?.inputItems.first as? NSExtensionItem {
             
-           // input item contains an array of attachments, which are given to us wrapped up as an NSItemProvider
+            // input item contains an array of attachments, which are given to us wrapped up as an NSItemProvider
             if let itemProvider = inputItem.attachments?.first  {
                 
                 //ask the item provider to actually provide us with its item, but you'll notice it uses a closure so this code executes asynchronously. the method will carry on executing while the item provider is busy loading and sending us its data
@@ -50,17 +53,24 @@ class ActionViewController: UIViewController {
                     //We sent a dictionary of data from JavaScript, so we typecast javaScriptValues as an NSDictionary
                     guard let javaScriptValues = itemDictionary[NSExtensionJavaScriptPreprocessingResultsKey] as? NSDictionary else { return }
                     print(javaScriptValues)
+                    self?.pageTitle = javaScriptValues["title"] as? String ?? ""
+                    self?.pageURL = javaScriptValues["URL"] as? String ?? ""
+                    
+                    //needed because the closure being executed as a result of loadItem(forTypeIdentifier:) could be called on any thread, and we don't want to change the UI unless we're on the main thread
+                    DispatchQueue.main.async {
+                        self?.title = self?.pageTitle
+                    }
                     
                 }
             }
         }
         
     }
-
+    
     @IBAction func done() {
         // Return any edited content to the host app.
         // This template doesn't do anything, so we just echo the passed in items.
         self.extensionContext!.completeRequest(returningItems: self.extensionContext!.inputItems, completionHandler: nil)
     }
-
+    
 }
