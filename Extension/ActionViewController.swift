@@ -65,6 +65,7 @@ class ActionViewController: UIViewController {
         super.viewDidLoad()
         
         navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(done))
+        navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addScript))
         
         //get a reference to the default notification center
         let notificationCenter = NotificationCenter.default
@@ -161,4 +162,16 @@ class ActionViewController: UIViewController {
         script.scrollRangeToVisible(selectedRange)
     }
     
+    
+    @objc func addScript() {
+        let ac = UIAlertController(title: "Choodr a script", message: nil, preferredStyle: .actionSheet)
+        let action = UIAlertAction(title: "Pop up saying hello world", style: .default) { [weak self] action in
+            self?.script.text = """
+alert("hello world")
+"""
+        }
+        ac.addAction(action)
+        present(ac,animated: true)
+        
+    }
 }
